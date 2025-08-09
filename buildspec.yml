@@ -1,21 +1,25 @@
 version: 0.2
 
+env:
+  variables:
+    ECR_REPO_URI: "728280009402.dkr.ecr.us-east-1.amazonaws.com/my-static-site"
+    IMAGE_TAG: "latest"
+
 phases:
   pre_build:
     commands:
       - echo Logging in to Amazon ECR...
-      - aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 728280009402.dkr.ecr.us-east-1.amazonaws.com
-      - REPOSITORY_URI=728280009402.dkr.ecr.us-east-1.amazonaws.com/my-static-site
-      - IMAGE_TAG=$(date +%Y%m%d%H%M%S)
+      - aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $ECR_REPO_URI
   build:
     commands:
       - echo Building the Docker image...
-      - docker build -t $REPOSITORY_URI:$IMAGE_TAG .
+      - docker build -t my-static-site .
+      - docker tag my-static-site:latest $ECR_REPO_URI:$IMAGE_TAG
   post_build:
     commands:
-      - echo Pushing the Docker image...
-      - docker push $REPOSITORY_URI:$IMAGE_TAG
-      - echo Writing image definitions file...
-      - printf '[{"name":"my-container","imageUri":"%s"}]' $REPOSITORY_URI:$IMAGE_TAG > imagedefinitions.json
+      - echo Pushing the Docker image to ECR...
+      - docker push $ECR_REPO_URI:$IMAGE_TAG
+      - printf '[{"name":"my-static-site","imageUri":"%s"}]' $ECR_REPO_URI:$IMAGE_TAG > imagedefinitions.json
 artifacts:
-  files: imagedefinitions.json
+  files:
+    - imagedefinitions.json
